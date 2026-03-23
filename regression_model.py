@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -72,79 +71,4 @@ joblib.dump(model, "models/flight_price_model.pkl")
 joblib.dump(encoders, "models/regression_encoders.pkl")
 
 print("\n✅ Regression model saved successfully!")
-=======
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score, mean_absolute_error
-import joblib
-
-# ==============================
-# 1. Load datasets
-# ==============================
-flights = pd.read_csv("data/flights.csv")
-users = pd.read_csv("data/users.csv")
-
-# ==============================
-# 2. Merge datasets
-# ==============================
-flight_data = pd.merge(flights, users, left_on="userCode", right_on="code")
-
-# ==============================
-# 3. Preprocessing
-# ==============================
-df = flight_data.copy()
-
-# Drop unnecessary columns
-df = df.drop([
-    'travelCode', 'userCode', 'code',
-    'name', 'company', 'date', 'from', 'to'
-], axis=1)
-
-# ==============================
-# 4. Encode categorical columns
-# ==============================
-encoders = {}
-
-for col in ['flightType', 'agency', 'gender']:
-    le = LabelEncoder()
-    df[col] = le.fit_transform(df[col])
-    encoders[col] = le   # store encoder
-
-# ==============================
-# 5. Features & Target
-# ==============================
-X = df.drop('price', axis=1)
-y = df['price']
-
-# ==============================
-# 6. Train Test Split
-# ==============================
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
-
-# ==============================
-# 7. Train Model
-# ==============================
-model = LinearRegression()
-model.fit(X_train, y_train)
-
-# ==============================
-# 8. Evaluate Model
-# ==============================
-y_pred = model.predict(X_test)
-
-print("R2 Score:", r2_score(y_test, y_pred))
-print("MAE:", mean_absolute_error(y_test, y_pred))
-
-# ==============================
-# 9. Save Model + Encoders
-# ==============================
-joblib.dump(model, "models/flight_price_model.pkl")
-joblib.dump(encoders, "models/regression_encoders.pkl")
-
-print("\n✅ Regression model saved successfully!")
->>>>>>> c1622b5dc05837c452c7f26cd55fbdd3f18f79fc
 print("✅ Encoders saved successfully!")
