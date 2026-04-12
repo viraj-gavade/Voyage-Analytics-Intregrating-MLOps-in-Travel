@@ -98,3 +98,58 @@ def build_feature_vector(
     feature_array = np.array(feature_values, dtype=float).reshape(1, -1)
     logger.info("Feature vector built with %d features: %s", len(feature_values), feature_values)
     return feature_array
+
+
+
+
+def build_gender_feature_vector(request: dict) -> np.ndarray:
+    """Build feature vector for gender model"""
+
+    import pandas as pd
+
+    df = pd.DataFrame([request])
+
+    df["flight_frequency"] = df["flight_count"] / (df["total_days"] + 1)
+    df["spend_per_day"] = df["total_hotel_spend"] / (df["total_days"] + 1)
+    df["avg_spend_per_trip"] = df["total_price"] / (df["flight_count"] + 1)
+    df["distance_per_trip"] = df["total_distance"] / (df["flight_count"] + 1)
+
+    age = request.get("age", 0)
+    if age <= 17:
+        age_group = 0
+    elif age <= 25:
+        age_group = 1
+    elif age <= 35:
+        age_group = 2
+    elif age <= 50:
+        age_group = 3
+    elif age <= 65:
+        age_group = 4
+    else:
+        age_group = 5
+
+    df["age_group"] = age_group
+
+    df.fillna(0, inplace=True)
+
+    feature_order = [
+        "flight_count",
+        "total_price",
+        "total_distance",
+        "total_hotel_spend",
+        "total_days",
+        "age",
+        "flight_frequency",
+        "spend_per_day",
+        "avg_spend_per_trip",
+        "distance_per_trip",
+        "age_group"
+    ]
+
+    feature_values = [df.iloc[0][col] for col in feature_order]
+
+    feature_array = np.array(feature_values, dtype=float).reshape(1, -1)
+
+    logger.info("Gender feature vector: %s", feature_values)
+
+    return feature_array

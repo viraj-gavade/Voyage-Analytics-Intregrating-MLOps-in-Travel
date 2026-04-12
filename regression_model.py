@@ -46,9 +46,6 @@ except ImportError:
 os.makedirs("models", exist_ok=True)
 os.makedirs("reports", exist_ok=True)
 
-# ──────────────────────────────────────────────────────────────
-# 1. LOAD & MERGE
-# ──────────────────────────────────────────────────────────────
 print("\n" + "═"*60)
 print("  STEP 1 — Loading & Merging Datasets")
 print("═"*60)
@@ -60,28 +57,25 @@ flight_data = pd.merge(flights, users, left_on="userCode", right_on="code")
 print(f"  ✔ Merged shape : {flight_data.shape}")
 print(f"  ✔ Columns      : {list(flight_data.columns)}")
 
-# ──────────────────────────────────────────────────────────────
-# 2. FEATURE ENGINEERING
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 2 — Feature Engineering")
 print("═"*60)
 
 df = flight_data.copy()
 
-# ── 2a. Date features ──────────────────────────────────────────
-if 'date' in df.columns:
+─if 'date' in df.columns:
     df['date'] = pd.to_datetime(df['date'], errors='coerce')
-    df['day_of_week']   = df['date'].dt.dayofweek          # 0=Mon … 6=Sun
+    df['day_of_week']   = df['date'].dt.dayofweek          
     df['month']         = df['date'].dt.month
     df['day_of_month']  = df['date'].dt.day
     df['is_weekend']    = (df['day_of_week'] >= 5).astype(int)
     df['quarter']       = df['date'].dt.quarter
-    # Peak travel months: June–Aug (summer) and Dec (holiday)
+    
     df['is_peak_season']= df['month'].isin([6, 7, 8, 12]).astype(int)
     print("  ✔ Date features       : day_of_week, month, day_of_month, is_weekend, quarter, is_peak_season")
 
-# ── 2b. Age features ──────────────────────────────────────────
+
 if 'age' in df.columns:
     df['age_group'] = pd.cut(
         df['age'],
@@ -92,18 +86,18 @@ if 'age' in df.columns:
     df['is_student'] = (df['age'] <= 25).astype(int)
     print("  ✔ Age features        : age_group, is_senior, is_student")
 
-# ── 2c. Route / geography features ────────────────────────────
+
 if 'from' in df.columns and 'to' in df.columns:
     df['route'] = df['from'].astype(str) + "_" + df['to'].astype(str)
 
-    # Route popularity (frequency encoding)
+    
     route_freq  = df['route'].value_counts().to_dict()
     df['route_popularity'] = df['route'].map(route_freq)
 
-    # Per-route mean price (target encoding with smoothing)
+   
     global_mean  = df['price'].mean()
     route_stats  = df.groupby('route')['price'].agg(['mean', 'count'])
-    smooth_k     = 10  # smoothing factor
+    smooth_k     = 10  
     route_stats['smooth_mean'] = (
         (route_stats['mean'] * route_stats['count'] + global_mean * smooth_k)
         / (route_stats['count'] + smooth_k)
@@ -111,7 +105,6 @@ if 'from' in df.columns and 'to' in df.columns:
     df['route_mean_price'] = df['route'].map(route_stats['smooth_mean'])
     print("  ✔ Route features      : route_popularity, route_mean_price")
 
-# ── 2d. Agency features ───────────────────────────────────────
 if 'agency' in df.columns:
     agency_freq = df['agency'].value_counts().to_dict()
     df['agency_popularity'] = df['agency'].map(agency_freq)
@@ -120,21 +113,17 @@ if 'agency' in df.columns:
     df['agency_mean_price'] = df['agency'].map(agency_mean)
     print("  ✔ Agency features     : agency_popularity, agency_mean_price")
 
-# ── 2e. Flight-type premium ───────────────────────────────────
+
 if 'flightType' in df.columns:
     ft_mean = df.groupby('flightType')['price'].mean().to_dict()
     df['flightType_mean_price'] = df['flightType'].map(ft_mean)
     print("  ✔ FlightType feature  : flightType_mean_price")
 
-# ── 2f. Interaction features ──────────────────────────────────
 numeric_pairs = []
 if 'age' in df.columns and 'flightType' in df.columns:
-    # We'll create numerical interactions after encoding
     numeric_pairs.append(('age', 'flightType_mean_price'))
 
-# ──────────────────────────────────────────────────────────────
-# 3. ENCODE CATEGORICALS
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 3 — Encoding Categorical Columns")
 print("═"*60)
@@ -153,7 +142,7 @@ for col in ['flightType', 'agency', 'gender']:
         encoders[col] = le
         print(f"  ✔ Encoded: {col}")
 
-# ── 2f (cont) — Numerical interaction features ─────────────────
+
 if 'age' in df.columns and 'agency_mean_price' in df.columns:
     df['age_x_agency_price'] = df['age'] * df['agency_mean_price']
     print("  ✔ Interaction         : age × agency_mean_price")
@@ -162,14 +151,12 @@ if 'is_peak_season' in df.columns and 'flightType' in df.columns:
     df['peak_x_flightType'] = df['is_peak_season'] * df['flightType']
     print("  ✔ Interaction         : is_peak_season × flightType")
 
-# ── 2g. Log-transform skewed numerics ─────────────────────────
+
 for col in ['price']:
     if col in df.columns:
         df[f'log_{col}'] = np.log1p(df[col])
 
-# ──────────────────────────────────────────────────────────────
-# 4. HANDLE MISSING VALUES
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 4 — Handling Missing Values")
 print("═"*60)
@@ -179,9 +166,7 @@ df = df.fillna(df.median(numeric_only=True))
 missing_after = df.isnull().sum().sum()
 print(f"  ✔ Missing values: {missing_before} → {missing_after}")
 
-# ──────────────────────────────────────────────────────────────
-# 5. OUTLIER REMOVAL (IQR capping)
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 5 — Outlier Capping (IQR Method)")
 print("═"*60)
@@ -192,9 +177,6 @@ Q3 = df['price'].quantile(0.99)
 df = df[(df['price'] >= Q1) & (df['price'] <= Q3)]
 print(f"  ✔ Rows: {shape_before} → {df.shape[0]} (removed extreme price outliers)")
 
-# ──────────────────────────────────────────────────────────────
-# 6. FEATURE SELECTION
-# ──────────────────────────────────────────────────────────────
 print("\n" + "═"*60)
 print("  STEP 6 — Feature Selection (Mutual Information)")
 print("═"*60)
@@ -203,7 +185,7 @@ TARGET = 'price'
 X = df.drop([TARGET, 'log_price'], axis=1, errors='ignore')
 y = df[TARGET]
 
-# Mutual information to rank features
+
 mi_scores = mutual_info_regression(X.fillna(0), y, random_state=42)
 mi_series = pd.Series(mi_scores, index=X.columns).sort_values(ascending=False)
 print("\n  Feature Importance (Mutual Information):")
@@ -211,15 +193,12 @@ for feat, score in mi_series.items():
     bar = "█" * int(score * 30)
     print(f"    {feat:<30} {score:.4f}  {bar}")
 
-# Drop near-zero MI features
 keep_features = mi_series[mi_series > 0.001].index.tolist()
 X = X[keep_features]
 print(f"\n  ✔ Features kept: {len(keep_features)} / {len(mi_series)}")
 print(f"  ✔ Selected: {keep_features}")
 
-# ──────────────────────────────────────────────────────────────
-# 7. TRAIN / TEST SPLIT
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 7 — Train/Test Split (80/20)")
 print("═"*60)
@@ -234,9 +213,7 @@ scaler = StandardScaler()
 X_train_sc = scaler.fit_transform(X_train)
 X_test_sc  = scaler.transform(X_test)
 
-# ──────────────────────────────────────────────────────────────
-# 8. MULTI-MODEL BENCHMARK
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 8 — Multi-Model Benchmark (Cross-Validation)")
 print("═"*60)
@@ -294,14 +271,12 @@ for name, (model, use_scaled) in base_models.items():
     status = "✅" if r2 >= 0.85 else "⚠️ " if r2 >= 0.70 else "❌"
     print(f"  {status}  {name:<22}  R²={r2:.4f}  MAE={mae:>8.2f}  CV={cv_r2.mean():.4f}±{cv_r2.std():.4f}  ({elapsed:.1f}s)")
 
-# ──────────────────────────────────────────────────────────────
-# 9. HYPERPARAMETER TUNING — Best model(s)
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 9 — Hyperparameter Tuning (RandomizedSearchCV)")
 print("═"*60)
 
-# Sort by test R²; pick top model(s)
+
 sorted_results = sorted(results.items(), key=lambda x: x[1]['test_r2'], reverse=True)
 best_name, best_info = sorted_results[0]
 print(f"\n  Top model to tune: {best_name}  (R²={best_info['test_r2']:.4f})")
@@ -349,7 +324,7 @@ param_grids = {
     },
 }
 
-# Default to GradientBoosting if best model has no param grid
+
 tune_name = best_name if best_name in param_grids else "GradientBoosting"
 tune_model_base, tune_scaled = base_models[tune_name]
 
@@ -393,9 +368,7 @@ results[f"{tune_name}_Tuned"] = {
     "best_params": rscv.best_params_,
 }
 
-# ──────────────────────────────────────────────────────────────
-# 10. ENSEMBLE / STACKING
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 10 — Ensemble (Weighted Voting of Top-3 Models)")
 print("═"*60)
@@ -408,8 +381,7 @@ for nm, inf in top3:
     estimators.append((nm, inf["model"]))
     print(f"  ✔ Included: {nm}")
 
-# Voting Regressor (simple average — no scaling mismatch)
-# We re-train each estimator on X_train (unscaled) in a fresh clone
+
 from sklearn.base import clone
 ensemble_estimators = []
 for nm, inf in top3:
@@ -438,9 +410,7 @@ results["Ensemble_Top3"] = {
     "rmse"       : ens_rmse,
 }
 
-# ──────────────────────────────────────────────────────────────
-# 11. FINAL LEADERBOARD
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 11 — Final Leaderboard")
 print("═"*60)
@@ -454,9 +424,7 @@ for rank, (nm, inf) in enumerate(sorted_final, 1):
     flag = "✅ ACHIEVED" if r2 >= 0.85 else ("⚠️  Close" if r2 >= 0.75 else "❌")
     print(f"  {rank:<5} {nm:<28} {r2:>9.4f} {inf['mae']:>10.2f} {inf['rmse']:>10.2f}  {flag}")
 
-# ──────────────────────────────────────────────────────────────
-# 12. SAVE EVERYTHING
-# ──────────────────────────────────────────────────────────────
+
 print("\n" + "═"*60)
 print("  STEP 12 — Saving Models & Artifacts")
 print("═"*60)
@@ -468,7 +436,7 @@ joblib.dump(scaler,                  "models/scaler.pkl")
 joblib.dump(encoders,                "models/encoders.pkl")
 joblib.dump(keep_features,           "models/selected_features.pkl")
 
-# Save leaderboard as JSON report
+
 report = {
     "champion"       : champion_name,
     "champion_r2"    : champion_info["test_r2"],

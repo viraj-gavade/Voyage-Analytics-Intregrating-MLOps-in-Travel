@@ -44,3 +44,21 @@ class FlightPriceRequest(BaseModel):
 
 class FlightPriceResponse(BaseModel):
     predicted_price: float
+
+
+
+
+
+
+
+class GenderRequest(BaseModel):
+    flight_count: int
+    total_price: float
+    total_distance: float
+    total_hotel_spend: float
+    total_days: int
+    age: int
+
+
+class GenderResponse(BaseModel):
+    predicted_gender: str

@@ -1,17 +1,5 @@
 {
-  "final_model": "RandomForest",
-  "r2": 0.9999971498896288,
-  "mae": 0.0335554231528118,
-  "features": [
-    "travelCode",
-    "time",
-    "distance",
-    "age",
-    "day_of_week",
-    "is_weekend",
-    "age_group",
-    "route_te",
-    "agency_te",
-    "flightType_te"
-  ]
+  "model": "RandomForest",
+  "r2": 0.9999944296986114,
+  "mae": 0.11802836000069881
 }
