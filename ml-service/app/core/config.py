@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     features_path: Path = MODELS_DIR / "features.pkl"
     target_encodings_path: Path = MODELS_DIR / "target_encodings.pkl"
     log_level: str = "INFO"
+    gender_model_path: Path = MODELS_DIR / "gender_model.pkl"
+    gender_encoder_path: Path = MODELS_DIR / "gender_encoder.pkl"
 
     class Config:
         env_file = ".env"
